@@ -1412,39 +1412,35 @@ function sendDiscordNotification(item) {
   const webhookUrl = localStorage.getItem('neya_webhook');
   if (!webhookUrl) return;
 
-  const typeLabel = item.type === 'film' ? '🎬 Film' : item.type === 'series' ? '📺 Série' : '⛩️ Animé';
   const typeEmoji = item.type === 'film' ? '🎬' : item.type === 'series' ? '📺' : '⛩️';
+  const typeLabel = item.type === 'film' ? 'Film' : item.type === 'series' ? 'Série' : 'Animé';
   const color = item.type === 'film' ? 0xff006e : item.type === 'series' ? 0x00ff88 : 0x00d4ff;
 
-  let description = `>>> ${typeEmoji} **${item.title}** | Type : ${item.type === 'film' ? 'Film' : item.type === 'series' ? 'Série' : 'Animé'}\n`;
-  if (item.genre) description += `🏷️ **Catégories** : ${item.genre}\n`;
-  if (item.year) description += `📅 **Année** : ${item.year}\n`;
-  if (item.rating) description += `⭐ **Note** : ${item.rating}/10\n`;
+  let description = `>>>     ${typeEmoji} **${item.title} **| Type : ${typeLabel}\n    🏷️ **Catégories** :`;
+  if (item.genre) description += ` ${item.genre}`;
   if ((item.type === 'series' || item.type === 'anime') && item.season) {
-    description += `📂 **Saison** : ${item.season}`;
+    description += `\n    📂 **Saison ${item.season}**`;
     if (item.episodes) description += ` — ${item.episodes} épisode(s)`;
-    description += '\n';
-  }
-  if (item.synopsis) description += `\n📝 ${item.synopsis.slice(0, 200)}${item.synopsis.length > 200 ? '...' : ''}`;
-
-  const links = item.links || [];
-  if (links.length > 0) {
-    description += `\n\n🔗 **Sources disponibles** : ${links.map(l => `\`${l.label}\``).join(', ')}`;
   }
 
-  const embed = {
-    title: `${typeEmoji} Nouveau Contenu Ajouté !`,
-    description,
-    color,
-    footer: { text: 'Neya Streaming • ' + new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) },
+  const payload = {
+    content: null,
+    embeds: [
+      {
+        title: `${typeEmoji} Nouveau Contenu Ajouté !`,
+        description,
+        color,
+      }
+    ],
+    attachments: []
   };
 
-  if (item.poster) embed.thumbnail = { url: item.poster };
+  if (item.poster) payload.embeds[0].thumbnail = { url: item.poster };
 
   fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ embeds: [embed] })
+    body: JSON.stringify(payload)
   }).catch(() => {});
 }
 
