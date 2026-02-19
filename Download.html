@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tropi Downloader Pro</title>
+    <style>
+        :root {
+            --primary: #00d2d3;
+            --bg: #05080a;
+            --glass: rgba(10, 15, 25, 0.8);
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Effet de lueur en fond */
+        .glow {
+            position: fixed;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(0, 210, 211, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            filter: blur(80px);
+            animation: move 15s infinite alternate ease-in-out;
+        }
+
+        @keyframes move {
+            from { transform: translate(-10%, -10%); }
+            to { transform: translate(10%, 10%); }
+        }
+
+        .container {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            padding: 50px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.6);
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            background: linear-gradient(to bottom, #fff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+
+        .search-box {
+            background: rgba(0,0,0,0.5);
+            border-radius: 20px;
+            padding: 10px 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            margin-bottom: 25px;
+        }
+
+        input {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 20px;
+            border-radius: 20px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary), #00a8a8);
+            color: #000;
+            font-weight: 900;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 210, 211, 0.4);
+        }
+
+        #resultBox {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            border: 1px dashed var(--primary);
+            border-radius: 20px;
+            background: rgba(0, 210, 211, 0.05);
+        }
+
+        .loader {
+            display: none;
+            margin: 20px;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow"></div>
+
+    <div class="container">
+        <h1>TROPI <span>CLONE</span></h1>
+        
+        <div class="search-box">
+            <input type="text" id="uqloadUrl" placeholder="Collez votre lien Uqload ici...">
+        </div>
+
+        <button onclick="extract()" id="btn">🚀 Extraire la vidéo</button>
+
+        <div id="loader" class="loader">Extraction en cours...</div>
+
+        <div id="resultBox">
+            <h3 id="vidTitle" style="color:white; margin-bottom:20px;"></h3>
+            <button onclick="download()" style="background: white; color: black;">💾 Télécharger le MP4</button>
+        </div>
+    </div>
+
+    <script>
+        // L'ADRESSE DE L'API QUE NOUS AVONS TROUVÉE
+        const API_BASE = "http://node01.eternodes.fr:40024";
+        let currentData = null;
+
+        async function extract() {
+            const inputUrl = document.getElementById('uqloadUrl').value;
+            const btn = document.getElementById('btn');
+            const loader = document.getElementById('loader');
+            const resultBox = document.getElementById('resultBox');
+
+            if(!inputUrl) return alert("Lien vide !");
+
+            btn.style.display = "none";
+            loader.style.display = "block";
+            resultBox.style.display = "none";
+
+            try {
+                const response = await fetch(`${API_BASE}/uqload/extract`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: inputUrl })
+                });
+
+                const data = await response.json();
+
+                if(data.success) {
+                    currentData = data;
+                    document.getElementById('vidTitle').innerText = data.title;
+                    resultBox.style.display = "block";
+                } else {
+                    alert("Erreur : " + data.error);
+                }
+            } catch (e) {
+                alert("Erreur de connexion au serveur Eternodes.");
+            } finally {
+                loader.style.display = "none";
+                btn.style.display = "block";
+            }
+        }
+
+        function download() {
+            if(currentData) {
+                // Utilisation de la route de téléchargement directe
+                const downloadLink = `${API_BASE}/uqload/download-video?url=${encodeURIComponent(currentData.downloadUrl)}&title=${encodeURIComponent(currentData.title)}`;
+                window.location.href = downloadLink;
+            }
+        }
+    </script>
+</body>
+</html>
