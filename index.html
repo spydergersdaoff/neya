@@ -1416,26 +1416,25 @@ function sendDiscordNotification(item) {
   const typeLabel = item.type === 'film' ? 'Film' : item.type === 'series' ? 'Série' : 'Animé';
   const color = item.type === 'film' ? 0xff006e : item.type === 'series' ? 0x00ff88 : 0x00d4ff;
 
-  let description = `>>>     ${typeEmoji} **${item.title} **| Type : ${typeLabel}\n    🏷️ **Catégories** :`;
-  if (item.genre) description += ` ${item.genre}`;
+  let description = `>>>     ${typeEmoji} **${item.title} **| Type : ${typeLabel}\n    🏷️ **Catégories** : ${item.genre || 'Non renseigné'}`;
   if ((item.type === 'series' || item.type === 'anime') && item.season) {
     description += `\n    📂 **Saison ${item.season}**`;
     if (item.episodes) description += ` — ${item.episodes} épisode(s)`;
   }
 
-  const payload = {
-    content: null,
-    embeds: [
-      {
-        title: `${typeEmoji} Nouveau Contenu Ajouté !`,
-        description,
-        color,
-      }
-    ],
-    attachments: []
+  const embed = {
+    title: `${typeEmoji} Nouveau Contenu Ajouté !`,
+    description,
+    color,
   };
 
-  if (item.poster) payload.embeds[0].thumbnail = { url: item.poster };
+  if (item.poster) embed.image = { url: item.poster };
+
+  const payload = {
+    content: null,
+    embeds: [embed],
+    attachments: []
+  };
 
   fetch(webhookUrl, {
     method: 'POST',
