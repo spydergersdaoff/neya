@@ -8,32 +8,104 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
 <script>
 // ============================================================
-// VÉRIFICATION TOKEN — avant tout chargement
+// VÉRIFICATION TOKEN — affiche un overlay si non connecté
 // ============================================================
 (function() {
   const TOKEN_KEY = 'neya_verified_token';
-  const VERIF_URL = 'verif.html';
-
-  function getCookie(name) {
-    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-    return match ? match[2] : null;
-  }
 
   function isVerified() {
-    // Vérifier localStorage
     try {
-      const stored = JSON.parse(localStorage.getItem(TOKEN_KEY));
-      if (stored && stored.token && stored.expires > Date.now()) return true;
+      const s = JSON.parse(localStorage.getItem(TOKEN_KEY));
+      if (s && s.token && s.expires > Date.now()) return true;
     } catch {}
-    // Vérifier cookie (backup)
-    if (getCookie(TOKEN_KEY)) return true;
-    return false;
+    const match = document.cookie.match(new RegExp('(^| )' + TOKEN_KEY + '=([^;]+)'));
+    return !!match;
   }
 
-  if (!isVerified()) {
-    // Pas vérifié → bloquer le chargement et rediriger
-    document.documentElement.style.visibility = 'hidden';
-    window.location.replace(VERIF_URL);
+  // Injecter l'overlay dès que le DOM est prêt
+  function injectGate() {
+    if (isVerified()) return; // déjà connecté → rien à faire
+
+    const overlay = document.createElement('div');
+    overlay.id = 'discordGateOverlay';
+    overlay.innerHTML = `
+      <div style="
+        position:fixed;inset:0;z-index:99999;
+        background:radial-gradient(ellipse at 50% 0%,#0d1b3e 0%,#0a0e1a 70%);
+        display:flex;align-items:center;justify-content:center;padding:2rem;
+        font-family:'Rajdhani',sans-serif;
+      ">
+        <!-- Grille -->
+        <div style="position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,212,255,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.04) 1px,transparent 1px);background-size:60px 60px;"></div>
+        <!-- Glow -->
+        <div style="position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:500px;height:300px;pointer-events:none;background:radial-gradient(ellipse,rgba(0,212,255,0.12) 0%,transparent 70%);"></div>
+
+        <div style="
+          position:relative;
+          background:linear-gradient(135deg,rgba(20,26,46,0.97),rgba(15,21,37,0.99));
+          border:1px solid rgba(0,212,255,0.25);border-radius:24px;
+          padding:3rem 2.5rem;max-width:460px;width:100%;text-align:center;
+          box-shadow:0 0 60px rgba(0,212,255,0.1),0 30px 80px rgba(0,0,0,0.6);
+          animation:gateIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+        ">
+          <!-- Logo -->
+          <div style="display:flex;align-items:center;justify-content:center;gap:0.6rem;margin-bottom:1.75rem;">
+            <img src="https://media.discordapp.net/attachments/1457377190110040309/1466842441264140431/LuaGen.webp?ex=6997437a&is=6995f1fa&hm=b679a2f2b0cad748f0ba661e99f56ee7095a356cfcbf86886a702902fd869cc4&=&format=webp"
+                 style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(0,212,255,0.4);box-shadow:0 0 16px rgba(0,212,255,0.3);">
+            <span style="font-family:'Bebas Neue',cursive;font-size:2.4rem;letter-spacing:3px;background:linear-gradient(135deg,#00d4ff,#ff006e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">NEYA</span>
+          </div>
+
+          <!-- Icône -->
+          <div style="width:72px;height:72px;border-radius:50%;background:rgba(88,101,242,0.12);border:2px solid rgba(88,101,242,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.8rem;">
+            <svg viewBox="0 0 24 24" fill="#5865F2" width="36" height="36"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+          </div>
+
+          <div style="font-family:'Bebas Neue',cursive;font-size:1.7rem;letter-spacing:2px;color:white;margin-bottom:0.5rem;">Connexion requise</div>
+          <div style="color:#7986cb;font-size:0.92rem;line-height:1.6;margin-bottom:1.75rem;">
+            Pour accéder à <strong style="color:#e8eaf6;">Neya</strong>, tu dois d'abord<br>
+            rejoindre notre serveur Discord.
+          </div>
+
+          <!-- Étapes -->
+          <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.75rem;text-align:left;">
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0.85rem;border-radius:8px;border:1px solid rgba(0,212,255,0.15);background:rgba(0,212,255,0.05);font-size:0.87rem;color:#e8eaf6;">
+              <span style="background:#00d4ff;color:#0a0e1a;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75rem;flex-shrink:0;">1</span>
+              Clique sur le bouton ci-dessous
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0.85rem;border-radius:8px;border:1px solid rgba(0,212,255,0.15);background:rgba(0,212,255,0.05);font-size:0.87rem;color:#e8eaf6;">
+              <span style="background:#00d4ff;color:#0a0e1a;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75rem;flex-shrink:0;">2</span>
+              Autorise l'application sur Discord
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0.85rem;border-radius:8px;border:1px solid rgba(0,212,255,0.15);background:rgba(0,212,255,0.05);font-size:0.87rem;color:#e8eaf6;">
+              <span style="background:#00d4ff;color:#0a0e1a;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.75rem;flex-shrink:0;">3</span>
+              Tu seras redirigé automatiquement ici
+            </div>
+          </div>
+
+          <!-- Bouton Discord -->
+          <a href="https://discord.com/oauth2/authorize?client_id=1474838522002145473&redirect_uri=https://restorecord.com/api/callback&response_type=code&scope=identify+guilds.join&state=1472474317194268862&prompt=none"
+             style="display:flex;align-items:center;justify-content:center;gap:0.75rem;width:100%;background:#5865F2;color:white;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1rem;letter-spacing:1px;text-transform:uppercase;padding:0.9rem 1.5rem;border-radius:12px;border:none;cursor:pointer;text-decoration:none;box-shadow:0 4px 20px rgba(88,101,242,0.4);transition:all 0.2s;"
+             onmouseover="this.style.background='#4752c4';this.style.transform='translateY(-2px)'"
+             onmouseout="this.style.background='#5865F2';this.style.transform='translateY(0)'">
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.002.022.015.043.03.056a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            Se connecter avec Discord
+          </a>
+          <div style="margin-top:0.75rem;font-size:0.75rem;color:#7986cb;">
+            Gratuit • Une seule fois • Valable 30 jours
+          </div>
+        </div>
+      </div>
+      <style>
+        @keyframes gateIn { from{opacity:0;transform:translateY(28px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+      </style>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectGate);
+  } else {
+    injectGate();
   }
 })();
 
