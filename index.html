@@ -1006,8 +1006,35 @@ async function sha256(message) {
   return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function getContent() { try { return JSON.parse(localStorage.getItem('neya_content') || '[]'); } catch { return []; } }
-function saveContent(data) { localStorage.setItem('neya_content', JSON.stringify(data)); }
+// ─── Stockage partagé (visible par tous les visiteurs) ───────────────────────
+let _contentCache = null; // cache mémoire pour éviter les appels répétés
+
+async function getContentAsync() {
+  try {
+    const result = await window.storage.get('neya_content', true);
+    _contentCache = JSON.parse(result.value || '[]');
+  } catch {
+    _contentCache = _contentCache || [];
+  }
+  return _contentCache;
+}
+
+async function saveContentAsync(data) {
+  _contentCache = data;
+  try {
+    await window.storage.set('neya_content', JSON.stringify(data), true);
+  } catch(e) {
+    console.error('Erreur sauvegarde:', e);
+    showToast('Erreur de sauvegarde', 'error');
+  }
+}
+
+// Versions synchrones utilisées par le code existant — s'appuient sur le cache
+function getContent() { return _contentCache || []; }
+function saveContent(data) {
+  _contentCache = data;
+  saveContentAsync(data); // sauvegarde en arrière-plan
+}
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -1231,9 +1258,30 @@ async function checkAdminPassword() {
   else { document.getElementById('pwError').classList.remove('hidden'); document.getElementById('adminPasswordInput').value = ''; document.getElementById('adminPasswordInput').focus(); }
 }
 
-function openAdminPanel() {
+async function openAdminPanel() {
   const saved = localStorage.getItem('neya_webhook');
   if (saved) { document.getElementById('webhookUrl').value = saved; document.getElementById('webhookStatus').innerHTML = `<span style="color:var(--accent-green);">✅ Webhook actif</span>`; }
+  
+  // Migration unique depuis localStorage → stockage partagé
+  const localData = localStorage.getItem('neya_content');
+  if (localData) {
+    try {
+      const localItems = JSON.parse(localData);
+      if (localItems.length > 0) {
+        const sharedItems = await getContentAsync();
+        if (sharedItems.length === 0) {
+          // Personne n'a encore de contenu partagé : migrer
+          await saveContentAsync(localItems);
+          showToast(`✅ ${localItems.length} film(s) migrés vers le stockage partagé !`);
+        }
+        localStorage.removeItem('neya_content'); // éviter la double migration
+      }
+    } catch {}
+  } else {
+    // Recharger depuis le stockage partagé à chaque ouverture
+    await getContentAsync();
+  }
+
   refreshAdminList(); document.getElementById('adminPanelOverlay').classList.remove('hidden'); document.body.style.overflow = 'hidden';
 }
 
@@ -1463,7 +1511,10 @@ function replaceDomain() {
   refreshAdminList(); renderRows(currentTab); showToast(`✅ ${count} lien(s) mis à jour !`);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Charger d'abord le contenu partagé (visible par tous)
+  await getContentAsync();
+
   // Init site
   createParticles();
   renderRows('all');
